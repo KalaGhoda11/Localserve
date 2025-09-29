@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Services - LocalServe</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #f8f9fa; }
+        .search-panel { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); height: calc(100vh - 120px); overflow-y: auto; }
+        .map-container { background: white; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); overflow: hidden; height: calc(100vh - 120px); }
+        #map { height: 100%; width: 100%; background: #e0e0e0; }
+        .provider-card { background: white; border: 2px solid #e9ecef; border-radius: 12px; padding: 15px; margin-bottom: 15px; cursor: pointer; transition: all 0.3s ease; }
+        .provider-card:hover { border-color: #667eea; box-shadow: 0 4px 12px rgba(102,126,234,0.2); transform: translateY(-2px); }
+        
+        /* Toast Notification in Corner */
+        .corner-toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            padding: 20px;
+            min-width: 320px;
+            max-width: 400px;
+            z-index: 9999;
+            animation: slideInRight 0.3s ease;
+            border-left: 4px solid #667eea;
+        }
+        
+        @keyframes slideInRight {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .corner-toast.success {
+            border-left-color: #28a745;
+        }
+        
+        .corner-toast.error {
+            border-left-color: #dc3545;
+        }
+        
+        .toast-header-custom {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .toast-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #999;
+            margin-left: auto;
+        }
+        
+        .toast-spinner {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+        }
+        
+        .provider-profile-modal .provider-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px 15px 0 0;
+        }
+        
+        .service-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            background: #e9ecef;
+            border-radius: 20px;
+            margin: 5px;
+            font-size: 0.85rem;
+        }
+        
+        .skeleton {
+            animation: skeleton-loading 1s linear infinite alternate;
+        }
+        
+        @keyframes skeleton-loading {
+            0% { background-color: #f0f0f0; }
+            100% { background-color: #e0e0e0; }
+        }
+        
+        .skeleton-card {
+            height: 120px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/"><i class="fas fa-tools"></i> LocalServe</a>
+            <div>
+                <a href="/consumer/bookings" class="btn btn-outline-light btn-sm me-2">
+                    <i class="fas fa-clipboard-list"></i> My Bookings
+                </a>
+                <span class="navbar-text text-white"><i class="fas fa-map-marker-alt"></i> Bangalore</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="search-panel">
+                    <h4 class="mb-4">Find Services Near You</h4>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Select Service</label>
+                        <select class="form-select" id="serviceSelect">
+                            <option value="">All Services</option>
+                            <option value="Electrician">Electrician</option>
+                            <option value="Plumber">Plumber</option>
+                            <option value="Carpenter">Carpenter</option>
+                        </select>
+                    </div>
+
+                    <button class="btn btn-primary w-100 mb-4" onclick="searchProviders()">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+
+                    <div id="resultsCount" class="alert alert-info" style="display:none;"></div>
+                    <div id="expandRadiusOption" style="display:none;" class="mb-3">
+                        <div class="alert alert-warning">
+                            <p class="mb-2"><i class="fas fa-exclamation-triangle"></i> No providers found within <span id="currentRadius">1.0</span>km</p>
+                            <button class="btn btn-sm btn-warning w-100" onclick="expandSearch()">
+                                <i class="fas fa-expand-arrows-alt"></i> Search in <span id="nextRadius">1.5</span>km radius
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="broadcastOption" style="display:none;" class="mb-3">
+                        <div class="alert alert-success">
+                            <h6><i class="fas fa-bullhorn"></i> Send to Multiple Providers</h6>
+                            <p class="small mb-2">Found <span id="providerCount">0</span> providers. Choose an option:</p>
+                            <button class="btn btn-sm btn-success w-100 mb-2" onclick="showBroadcastModal()">
+                                <i class="fas fa-broadcast-tower"></i> Send to ALL Providers
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="providersList">
+                        <p class="text-muted">Select a service and click search...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-8">
+                <div class="map-container">
+                    <div id="map"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Corner Toast Container -->
+    <div id="toastContainer"></div>
+
+    <!-- Booking Modal -->
+    <div class="modal fade" id="bookingModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Book Service</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <h6 id="modalProviderName"></h6>
+                    <p class="text-muted mb-3" id="modalProviderDetails"></p>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-primary" onclick="bookService('Installation', false)">
+                            <i class="fas fa-wrench"></i> Installation
+                        </button>
+                        <button class="btn btn-outline-primary" onclick="bookService('Repair', false)">
+                            <i class="fas fa-tools"></i> Repair
+                        </button>
+                        <button class="btn btn-outline-primary" onclick="bookService('Products', false)">
+                            <i class="fas fa-box"></i> Products
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Broadcast Modal -->
+    <div class="modal fade" id="broadcastModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="fas fa-broadcast-tower"></i> Send to ALL Providers</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Your request will be sent to <strong id="broadcastCount">0</strong> providers.
+                    </div>
+                    <h6>Select Service Type:</h6>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-success" onclick="bookService('Installation', true)">
+                            <i class="fas fa-wrench"></i> Installation
+                        </button>
+                        <button class="btn btn-outline-success" onclick="bookService('Repair', true)">
+                            <i class="fas fa-tools"></i> Repair
+                        </button>
+                        <button class="btn btn-outline-success" onclick="bookService('Products', true)">
+                            <i class="fas fa-box"></i> Products
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Provider Accepted Modal -->
+    <div class="modal fade" id="providerAcceptedModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="fas fa-check-circle"></i> Provider Accepted!</h5>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-user-circle fa-5x text-success mb-3"></i>
+                        <h4 id="acceptedProviderName"></h4>
+                        <p class="text-muted" id="acceptedProviderService"></p>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><i class="fas fa-star text-warning"></i> <strong>Rating:</strong> <span id="acceptedProviderRating"></span></p>
+                            <p><i class="fas fa-phone text-primary"></i> <strong>Phone:</strong> <span id="acceptedProviderPhone"></span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><i class="fas fa-map-marker-alt text-danger"></i> <strong>Location:</strong> <span id="acceptedProviderLocation"></span></p>
+                            <p><i class="fas fa-money-bill-wave text-success"></i> <strong>Price:</strong> <span id="acceptedProviderPrice"></span></p>
+                        </div>
+                    </div>
+                    <div class="alert alert-success mt-3">
+                        <strong id="acceptedProviderAvailability"></strong>
+                        <p class="mb-0 mt-2">The provider will contact you shortly.</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-success" onclick="callProvider()">
+                        <i class="fas fa-phone"></i> Call Provider Now
+                    </button>
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="resetSearch()">Done</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        let map, markers = [], userLocation = { lat: 12.9716, lng: 77.5946 };
+        let selectedProvider, currentRadius = 1.0, searchRadiusOptions = [1.0, 1.5, 2.0, 3.0, 5.0, 10.0];
+        let currentRadiusIndex = 0, lastSearchService = '', currentRequestId, statusCheckInterval;
+        let acceptedProviderPhone = '', availableProviders = [];
+        let currentToast = null;
+
+        // Toast Notification Functions
+        function showToast(message, type = 'info', showSpinner = false, persistent = false) {
+            hideToast(); // Hide any existing toast
+            
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `corner-toast ${type}`;
+            
+            toast.innerHTML = `
+                <div class="toast-header-custom">
+                    <div style="display: flex; align-items: center;">
+                        ${showSpinner ? '<div class="spinner-border toast-spinner text-primary"></div>' : ''}
+                        <strong>${type === 'success' ? '<i class="fas fa-check-circle text-success"></i>' : 
+                                 type === 'error' ? '<i class="fas fa-exclamation-circle text-danger"></i>' : 
+                                 '<i class="fas fa-info-circle text-primary"></i>'}</strong>
+                    </div>
+                    ${!persistent ? '<button class="toast-close" onclick="hideToast()">×</button>' : ''}
+                </div>
+                <div class="toast-body">
+                    ${message}
+                </div>
+            `;
+            
+            container.appendChild(toast);
+            currentToast = toast;
+            
+            if (!persistent) {
+                setTimeout(hideToast, 5000);
+            }
+            
+            return toast;
+        }
+        
+        function hideToast() {
+            if (currentToast) {
+                currentToast.style.animation = 'slideOutRight 0.3s ease';
+                setTimeout(() => {
+                    if (currentToast && currentToast.parentNode) {
+                        currentToast.parentNode.removeChild(currentToast);
+                    }
+                    currentToast = null;
+                }, 300);
+            }
+        }
+        
+        function updateToast(message, type = 'info', showSpinner = false) {
+            if (currentToast) {
+                const bodyDiv = currentToast.querySelector('.toast-body');
+                if (bodyDiv) {
+                    bodyDiv.innerHTML = message;
+                    currentToast.className = `corner-toast ${type}`;
+                    const header = currentToast.querySelector('.toast-header-custom');
+                    if (header && showSpinner) {
+                        header.querySelector('div').innerHTML = '<div class="spinner-border toast-spinner text-primary"></div><strong><i class="fas fa-info-circle text-primary"></i></strong>';
+                    }
+                }
+            }
+        }
+
+        function initMap() {
+            if (typeof L === 'undefined') {
+                document.getElementById('map').innerHTML = '<div class="alert alert-danger m-3">Map library not loaded</div>';
+                return;
+            }
+
+            try {
+                map = L.map('map', {
+                    center: [12.9716, 77.5946],
+                    zoom: 14
+                });
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap'
+                }).addTo(map);
+
+                L.marker([userLocation.lat, userLocation.lng]).addTo(map).bindPopup('Your Location');
+
+                setTimeout(() => { map.invalidateSize(); }, 100);
+                loadAllProviders();
+            } catch(e) {
+                document.getElementById('map').innerHTML = '<div class="alert alert-danger m-3">Error: ' + e.message + '</div>';
+            }
+        }
+
+        function loadAllProviders() {
+            fetch('/api/providers')
+                .then(r => r.json())
+                .then(providers => {
+                    providers.forEach(p => {
+                        L.marker([p.lat, p.lng]).addTo(map).bindPopup(`<b>${p.name}</b><br>${p.service}<br>⭐ ${p.rating}`);
+                    });
+                })
+                .catch(e => console.error('Load providers error:', e));
+        }
+
+        function searchProviders() {
+            currentRadius = 1.0;
+            currentRadiusIndex = 0;
+            lastSearchService = document.getElementById('serviceSelect').value;
+            
+            // Show loading skeleton
+            document.getElementById('providersList').innerHTML = `
+                <div class="skeleton skeleton-card"></div>
+                <div class="skeleton skeleton-card"></div>
+                <div class="skeleton skeleton-card"></div>
+            `;
+            
+            performSearch();
+        }
+
+        function performSearch() {
+            fetch(`/api/search?service=${lastSearchService}&lat=${userLocation.lat}&lng=${userLocation.lng}&radius=${currentRadius}`)
+                .then(r => r.json())
+                .then(data => {
+                    availableProviders = data.providers;
+                    if (data.count === 0) {
+                        showExpandOption();
+                        document.getElementById('broadcastOption').style.display = 'none';
+                    } else {
+                        hideExpandOption();
+                        displayResults(data.providers, data.radius_used);
+                        if (data.count > 1) {
+                            document.getElementById('broadcastOption').style.display = 'block';
+                            document.getElementById('providerCount').textContent = data.count;
+                        }
+                    }
+                });
+        }
+
+        function expandSearch() {
+            currentRadiusIndex++;
+            if (currentRadiusIndex >= searchRadiusOptions.length) {
+                document.getElementById('expandRadiusOption').innerHTML = '<div class="alert alert-danger"><p class="mb-0">No providers within 10km</p></div>';
+                return;
+            }
+            currentRadius = searchRadiusOptions[currentRadiusIndex];
+            performSearch();
+        }
+
+        function showExpandOption() {
+            document.getElementById('resultsCount').style.display = 'none';
+            document.getElementById('providersList').innerHTML = '';
+            document.getElementById('currentRadius').textContent = currentRadius.toFixed(1);
+            if (currentRadiusIndex + 1 < searchRadiusOptions.length) {
+                document.getElementById('nextRadius').textContent = searchRadiusOptions[currentRadiusIndex + 1].toFixed(1);
+                document.getElementById('expandRadiusOption').style.display = 'block';
+            }
+        }
+
+        function hideExpandOption() {
+            document.getElementById('expandRadiusOption').style.display = 'none';
+        }
+
+        function displayResults(providers, radiusUsed) {
+            document.getElementById('resultsCount').style.display = 'block';
+            document.getElementById('resultsCount').innerHTML = `<i class="fas fa-check-circle"></i> Found ${providers.length} provider(s) within <strong>${radiusUsed}km</strong>`;
+            
+            document.getElementById('providersList').innerHTML = providers.map(p => `
+                <div class="provider-card" onclick='openBookingModal(${JSON.stringify(p).replace(/'/g, "&#39;")})'>
+                    <div class="d-flex justify-content-between mb-2">
+                        <div><h6 class="mb-1">${p.name}</h6><small class="text-muted">${p.service}</small></div>
+                        <span class="badge bg-primary">${p.distance} km</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <div><span class="text-warning">⭐ ${p.rating}</span> <small>(${p.reviews})</small></div>
+                        <span class="text-success fw-bold">${p.price}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openBookingModal(provider) {
+            selectedProvider = provider;
+            document.getElementById('modalProviderName').textContent = provider.name;
+            document.getElementById('modalProviderDetails').textContent = `${provider.service} • ⭐ ${provider.rating}`;
+            new bootstrap.Modal(document.getElementById('bookingModal')).show();
+        }
+
+        function showBroadcastModal() {
+            document.getElementById('broadcastCount').textContent = availableProviders.length;
+            new bootstrap.Modal(document.getElementById('broadcastModal')).show();
+        }
+
+        function bookService(serviceType, isBroadcast) {
+            let m1 = bootstrap.Modal.getInstance(document.getElementById('bookingModal'));
+            let m2 = bootstrap.Modal.getInstance(document.getElementById('broadcastModal'));
+            if (m1) m1.hide();
+            if (m2) m2.hide();
+
+            let bookingData = isBroadcast ? {
+                customer_name: 'Rajesh Kumar',
+                customer_phone: '+91 98765 00000',
+                provider_ids: availableProviders.map(p => p.id),
+                provider_name: 'Multiple Providers',
+                service: lastSearchService,
+                service_type: serviceType,
+                distance: `Within ${currentRadius}km`,
+                budget: 'Variable',
+                details: `Broadcast to ${availableProviders.length} providers`,
+                customer_lat: userLocation.lat,
+                customer_lng: userLocation.lng,
+                broadcast_mode: true
+            } : {
+                customer_name: 'Rajesh Kumar',
+                customer_phone: '+91 98765 00000',
+                provider_id: selectedProvider.id,
+                provider_name: selectedProvider.name,
+                service: selectedProvider.service,
+                service_type: serviceType,
+                distance: selectedProvider.distance + ' km',
+                budget: selectedProvider.price,
+                details: `${serviceType} service requested`,
+                customer_lat: userLocation.lat,
+                customer_lng: userLocation.lng,
+                broadcast_mode: false
+            };
+
+            // Show corner toast instead of full screen modal
+            const providerName = isBroadcast ? `${availableProviders.length} providers` : selectedProvider.name;
+            showToast(
+                `<strong>Request sent!</strong><br>Waiting for response from ${providerName}...`,
+                'info',
+                true,
+                true
+            );
+
+            fetch('/api/booking/request', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(bookingData)
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    currentRequestId = data.request_id;
+                    startStatusPolling();
+                }
+            });
+        }
+
+        function startStatusPolling() {
+            statusCheckInterval = setInterval(checkRequestStatus, 2000);
+        }
+
+        function checkRequestStatus() {
+            if (!currentRequestId) return;
+            fetch(`/api/consumer/check-status/${currentRequestId}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === 'accepted') {
+                        clearInterval(statusCheckInterval);
+                        hideToast();
+                        showProviderAcceptedModal(data.provider_details);
+                    }
+                });
+        }
+
+        function showProviderAcceptedModal(pd) {
+            document.getElementById('acceptedProviderName').textContent = pd.name;
+            document.getElementById('acceptedProviderService').textContent = pd.service;
+            document.getElementById('acceptedProviderRating').textContent = `${pd.rating} ⭐`;
+            document.getElementById('acceptedProviderPhone').textContent = pd.phone;
+            document.getElementById('acceptedProviderLocation').textContent = pd.location;
+            document.getElementById('acceptedProviderPrice').textContent = pd.price;
+            document.getElementById('acceptedProviderAvailability').textContent = pd.availability;
+            acceptedProviderPhone = pd.phone;
+            
+            new bootstrap.Modal(document.getElementById('providerAcceptedModal')).show();
+            
+            // Show success toast
+            showToast(
+                `<strong>Great news!</strong><br>${pd.name} accepted your request!`,
+                'success',
+                false,
+                false
+            );
+        }
+
+        function callProvider() {
+            window.location.href = `tel:${acceptedProviderPhone}`;
+        }
+
+        function resetSearch() {
+            currentRequestId = null;
+            if (statusCheckInterval) clearInterval(statusCheckInterval);
+        }
+
+        // Start when page loads
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                setTimeout(initMap, 200);
+            });
+        } else {
+            setTimeout(initMap, 200);
+        }
+    </script>
+</body>
+</html>

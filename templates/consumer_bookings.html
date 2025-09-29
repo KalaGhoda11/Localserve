@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Bookings - LocalServe</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <style>
+        body { background: #f8f9fa; transition: background 0.3s, color 0.3s; }
+        body.dark-mode { background: #1a1d2e; color: #e0e0e0; }
+        body.dark-mode .navbar { background: #252945 !important; }
+        body.dark-mode .booking-card, body.dark-mode .card { background: #252945; color: #e0e0e0; border-color: #3d4568; }
+        body.dark-mode .form-control, body.dark-mode .form-select { background: #2d3250; color: #e0e0e0; border-color: #3d4568; }
+        body.dark-mode .modal-content { background: #252945; color: #e0e0e0; }
+        body.dark-mode .nav-tabs .nav-link { color: #e0e0e0; }
+        body.dark-mode .nav-tabs .nav-link.active { background: #2d3250; color: #667eea; border-color: #3d4568; }
+        
+        .booking-card { 
+            background: white; 
+            border-radius: 12px; 
+            padding: 20px; 
+            margin-bottom: 20px; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); 
+            transition: all 0.3s;
+        }
+        .booking-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        
+        .status-badge { 
+            padding: 8px 16px; 
+            border-radius: 20px; 
+            font-size: 0.85rem; 
+            font-weight: 600; 
+        }
+        
+        .job-timeline { 
+            position: relative; 
+            padding-left: 30px; 
+            margin: 20px 0; 
+        }
+        
+        .timeline-step { 
+            position: relative; 
+            padding-bottom: 20px; 
+        }
+        
+        .timeline-step::before { 
+            content: ''; 
+            position: absolute; 
+            left: -22px; 
+            top: 5px; 
+            width: 12px; 
+            height: 12px; 
+            border-radius: 50%; 
+            background: #e0e0e0; 
+            border: 3px solid white; 
+            box-shadow: 0 0 0 2px #e0e0e0; 
+        }
+        
+        .timeline-step.active::before { 
+            background: #28a745; 
+            box-shadow: 0 0 0 2px #28a745; 
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 2px #28a745; }
+            50% { box-shadow: 0 0 0 6px rgba(40, 167, 69, 0.3); }
+        }
+        
+        .timeline-step::after { 
+            content: ''; 
+            position: absolute; 
+            left: -17px; 
+            top: 17px; 
+            width: 2px; 
+            height: calc(100% - 12px); 
+            background: #e0e0e0; 
+        }
+        
+        .timeline-step:last-child::after { display: none; }
+        
+        .chat-box { 
+            max-height: 300px; 
+            overflow-y: auto; 
+            background: #f8f9fa; 
+            border-radius: 8px; 
+            padding: 15px; 
+            margin: 15px 0; 
+        }
+        
+        body.dark-mode .chat-box { background: #1a1d2e; }
+        
+        .message { 
+            margin-bottom: 10px; 
+            padding: 8px 12px; 
+            border-radius: 8px; 
+            max-width: 70%; 
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .message.consumer { 
+            background: #007bff; 
+            color: white; 
+            margin-left: auto; 
+        }
+        
+        .message.provider { 
+            background: #e9ecef; 
+            color: #333; 
+        }
+        
+        body.dark-mode .message.provider { background: #2d3250; color: #e0e0e0; }
+        
+        .skeleton {
+            animation: skeleton-loading 1s linear infinite alternate;
+            border-radius: 8px;
+            height: 150px;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes skeleton-loading {
+            0% { background-color: #f0f0f0; }
+            100% { background-color: #e0e0e0; }
+        }
+        
+        body.dark-mode .skeleton {
+            animation: skeleton-loading-dark 1s linear infinite alternate;
+        }
+        
+        @keyframes skeleton-loading-dark {
+            0% { background-color: #2d3250; }
+            100% { background-color: #252945; }
+        }
+        
+        .filter-section {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        body.dark-mode .filter-section { background: #252945; }
+        
+        #trackingMap {
+            height: 300px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        
+        .dark-mode-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            cursor: pointer;
+            z-index: 1000;
+            transition: transform 0.3s;
+        }
+        
+        .dark-mode-toggle:hover { transform: scale(1.1); }
+        
+        .receipt-preview {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        body.dark-mode .receipt-preview { background: #252945; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-primary sticky-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/"><i class="fas fa-tools"></i> LocalServe</a>
+            <div>
+                <a href="/search" class="btn btn-outline-light btn-sm me-2"><i class="fas fa-search"></i> Search</a>
+                <a href="/" class="btn btn-outline-light btn-sm"><i class="fas fa-home"></i> Home</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3><i class="fas fa-clipboard-list"></i> My Bookings</h3>
+            <button class="btn btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#filterSection">
+                <i class="fas fa-filter"></i> Filters
+            </button>
+        </div>
+        
+        <!-- Filter Section -->
+        <div class="collapse" id="filterSection">
+            <div class="filter-section">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Service Type</label>
+                        <select class="form-select" id="filterService" onchange="applyFilters()">
+                            <option value="">All Services</option>
+                            <option value="Electrician">Electrician</option>
+                            <option value="Plumber">Plumber</option>
+                            <option value="Carpenter">Carpenter</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Date From</label>
+                        <input type="date" class="form-control" id="filterDateFrom" onchange="applyFilters()">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Date To</label>
+                        <input type="date" class="form-control" id="filterDateTo" onchange="applyFilters()">
+                    </div>
+                </div>
+                <button class="btn btn-sm btn-secondary" onclick="clearFilters()">
+                    <i class="fas fa-times"></i> Clear Filters
+                </button>
+            </div>
+        </div>
+        
+        <ul class="nav nav-tabs mb-4" id="bookingTabs">
+            <li class="nav-item">
+                <a class="nav-link active" data-bs-toggle="tab" href="#current">Current Jobs</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#completed">Completed</a>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="bookingsContent">
+            <div class="tab-pane fade show active" id="current">
+                <div id="currentBookings">
+                    <div class="skeleton"></div>
+                    <div class="skeleton"></div>
+                    <div class="skeleton"></div>
+                </div>
+            </div>
+            
+            <div class="tab-pane fade" id="completed">
+                <div id="completedBookings"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Modal -->
+    <div class="modal fade" id="chatModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-comments"></i> Chat with Provider</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="chatMessages" class="chat-box"></div>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="messageInput" placeholder="Type a message..." onkeypress="if(event.key==='Enter') sendMessage()">
+                        <button class="btn btn-primary" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Live Tracking Modal -->
+    <div class="modal fade" id="trackingModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-map-marker-alt"></i> Live Tracking</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Provider is on the way
+                        <div class="mt-2">
+                            <strong>Estimated arrival:</strong> <span id="estimatedArrival">15 minutes</span>
+                        </div>
+                    </div>
+                    <div id="trackingMap"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reschedule Modal -->
+    <div class="modal fade" id="rescheduleModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-calendar-alt"></i> Reschedule Booking</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">New Date</label>
+                        <input type="date" class="form-control" id="rescheduleDate" min="">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Preferred Time</label>
+                        <input type="time" class="form-control" id="rescheduleTime">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Reason (Optional)</label>
+                        <textarea class="form-control" id="rescheduleReason" rows="2" placeholder="Why are you rescheduling?"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="confirmReschedule()">
+                        <i class="fas fa-check"></i> Confirm Reschedule
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cancel Booking Modal -->
+    <div class="modal fade" id="cancelModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="fas fa-times-circle"></i> Cancel Booking</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i> Are you sure you want to cancel this booking?
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Reason for Cancellation</label>
+                        <select class="form-select mb-2" id="cancelReason">
+                            <option value="">Select a reason</option>
+                            <option value="Found another provider">Found another provider</option>
+                            <option value="No longer need service">No longer need service</option>
+                            <option value="Provider not responding">Provider not responding</option>
+                            <option value="Price too high">Price too high</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        <textarea class="form-control" id="cancelReasonText" rows="2" placeholder="Additional details (optional)"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Go Back</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmCancel()">
+                        <i class="fas fa-check"></i> Yes, Cancel Booking
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Modal -->
+    <div class="modal fade" id="paymentModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="fas fa-credit-card"></i> Make Payment</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Amount to Pay</label>
+                        <div class="input-group">
+                            <span class="input-group-text">₹</span>
+                            <input type="number" class="form-control" id="paymentAmount" value="500">
+                        </div>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Payment will be processed securely
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" onclick="processPayment()">
+                        <i class="fas fa-check"></i> Pay Now
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Receipt Modal -->
+    <div class="modal fade" id="receiptModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-receipt"></i> Payment Receipt</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="receipt-preview" id="receiptContent">
+                        <!-- Receipt content will be loaded here -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" onclick="downloadReceipt()">
+                        <i class="fas fa-download"></i> Download PDF
+                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rating Modal -->
+    <div class="modal fade" id="ratingModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title"><i class="fas fa-star"></i> Rate Service</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center mb-3">
+                        <h6 id="ratingProviderName"></h6>
+                        <div id="starRating" class="fs-1 mb-3">
+                            <i class="fas fa-star star-rating" data-rating="1"></i>
+                            <i class="fas fa-star star-rating" data-rating="2"></i>
+                            <i class="fas fa-star star-rating" data-rating="3"></i>
+                            <i class="fas fa-star star-rating" data-rating="4"></i>
+                            <i class="fas fa-star star-rating" data-rating="5"></i>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Write a Review</label>
+                        <textarea class="form-control" id="reviewText" rows="3" placeholder="Share your experience..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning" onclick="submitRating()">
+                        <i class="fas fa-check"></i> Submit Rating
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dark Mode Toggle -->
+    <button class="dark-mode-toggle" onclick="toggleDarkMode()" title="Toggle Dark Mode">
+        <i class="fas fa-moon"></i>
+    </button>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+        let bookings = [], currentRequestId, selectedRating = 0, trackingMap;
+        let allBookings = [], filteredBookings = [];
+        const socket = io();
+
+        // Dark mode
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+        }
+
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.body.classList.add('dark-mode');
+        }
+
+        // WebSocket connection
+        socket.on('connect', () => {
+            socket.emit('join_consumer', { consumer_id: 'consumer_1' });
+        });
+
+        socket.on('job_status_update', (data) => {
+            loadBookings();
+            showNotification(`Job status updated to ${data.status}`, 'info');
+        });
+
+        socket.on('new_message', (data) => {
+            if (currentRequestId === data.request_id) {
+                loadMessages();
+            }
+            showNotification('New message received', 'info');
+        });
+
+        socket.on('booking_rescheduled', (data) => {
+            showNotification('Booking rescheduled successfully', 'success');
+            loadBookings();
+        });
+
+        function showNotification(message, type = 'info') {
+            if (Notification.permission === 'granted') {
+                new Notification('LocalServe', { body: message });
+            }
+            
+            const toast = document.createElement('div');
+            toast.className = `alert alert-${type} position-fixed top-0 start-50 translate-middle-x mt-3`;
+            toast.style.zIndex = '9999';
+            toast.innerHTML = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Request notification permission
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+
+        function loadBookings() {
+            fetch('/api/consumer/my-bookings')
+                .then(r => r.json())
+                .then(data => {
+                    allBookings = data;
+                    bookings = data;
+                    applyFilters();
+                });
+        }
+
+        function applyFilters() {
+            const serviceFilter = document.getElementById('filterService').value;
+            const dateFrom = document.getElementById('filterDateFrom').value;
+            const dateTo = document.getElementById('filterDateTo').value;
+
+            filteredBookings = allBookings.filter(b => {
+                let match = true;
+                if (serviceFilter && b.service !== serviceFilter) match = false;
+                if (dateFrom && new Date(b.timestamp) < new Date(dateFrom)) match = false;
+                if (dateTo && new Date(b.timestamp) > new Date(dateTo)) match = false;
+                return match;
+            });
+
+            displayBookings();
+        }
+
+        function clearFilters() {
+            document.getElementById('filterService').value = '';
+            document.getElementById('filterDateFrom').value = '';
+            document.getElementById('filterDateTo').value = '';
+            applyFilters();
+        }
+
+        function displayBookings() {
+            const current = filteredBookings.filter(b => !b.rating && b.status !== 'rejected' && b.status !== 'cancelled');
+            const completed = filteredBookings.filter(b => b.rating || b.job_status === 'completed' || b.status === 'cancelled');
+
+            document.getElementById('currentBookings').innerHTML = current.length ? 
+                current.map(renderBookingCard).join('') : 
+                '<div class="alert alert-info">No active bookings</div>';
+
+            document.getElementById('completedBookings').innerHTML = completed.length ?
+                completed.map(renderCompletedCard).join('') :
+                '<div class="alert alert-info">No completed bookings</div>';
+        }
+
+        function renderBookingCard(b) {
+            const statusMap = {
+                'pending': { color: 'warning', icon: 'clock', text: 'Pending' },
+                'accepted': { color: 'info', icon: 'check-circle', text: 'Accepted' },
+                'in_progress': { color: 'primary', icon: 'spinner', text: 'In Progress' },
+                'completed': { color: 'success', icon: 'check-double', text: 'Completed' },
+                'cancelled': { color: 'danger', icon: 'times-circle', text: 'Cancelled' }
+            };
+            const status = statusMap[b.job_status || b.status] || statusMap['pending'];
+
+            return `
+                <div class="booking-card">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h5>${b.provider_name}</h5>
+                            <p class="text-muted mb-1">${b.service_type} - ${b.service}</p>
+                            <small class="text-muted">${b.timestamp}</small>
+                        </div>
+                        <span class="status-badge bg-${status.color} text-white">
+                            <i class="fas fa-${status.icon}"></i> ${status.text}
+                        </span>
+                    </div>
+
+                    <div class="job-timeline">
+                        <div class="timeline-step ${b.status === 'accepted' || b.job_status ? 'active' : ''}">
+                            <strong>Accepted</strong>
+                            ${b.accepted_at ? `<small class="text-muted d-block">${b.accepted_at}</small>` : ''}
+                        </div>
+                        <div class="timeline-step ${b.job_status === 'in_progress' || b.job_status === 'completed' ? 'active' : ''}">
+                            <strong>In Progress</strong>
+                        </div>
+                        <div class="timeline-step ${b.job_status === 'completed' ? 'active' : ''}">
+                            <strong>Completed</strong>
+                            ${b.completed_at ? `<small class="text-muted d-block">${b.completed_at}</small>` : ''}
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 mt-3 flex-wrap">
+                        ${b.status === 'accepted' ? `
+                            <button class="btn btn-sm btn-primary" onclick="openChat(${b.id})">
+                                <i class="fas fa-comments"></i> Chat
+                            </button>
+                            <button class="btn btn-sm btn-success" onclick="callProvider('${b.provider_details?.phone || ''}')">
+                                <i class="fas fa-phone"></i> Call
+                            </button>
+                            ${b.job_status === 'in_progress' ? `
+                                <button class="btn btn-sm btn-info" onclick="openTracking(${b.id})">
+                                    <i class="fas fa-map-marker-alt"></i> Track
+                                </button>
+                            ` : ''}
+                        ` : ''}
+                        ${b.can_reschedule && b.status !== 'cancelled' ? `
+                            <button class="btn btn-sm btn-warning" onclick="openReschedule(${b.id})">
+                                <i class="fas fa-calendar-alt"></i> Reschedule
+                            </button>
+                        ` : ''}
+                        ${b.can_cancel && b.status !== 'cancelled' ? `
+                            <button class="btn btn-sm btn-danger" onclick="openCancel(${b.id})">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+                        ` : ''}
+                        ${b.job_status === 'completed' && b.payment_status === 'unpaid' ? `
+                            <button class="btn btn-sm btn-success" onclick="openPayment(${b.id})">
+                                <i class="fas fa-credit-card"></i> Pay Now
+                            </button>
+                        ` : ''}
+                        ${b.payment_status === 'paid' && !b.rating ? `
+                            <button class="btn btn-sm btn-warning" onclick="openRating(${b.id}, '${b.provider_name}')">
+                                <i class="fas fa-star"></i> Rate Service
+                            </button>
+                        ` : ''}
+                        ${b.payment_status === 'paid' && b.receipt_id ? `
+                            <button class="btn btn-sm btn-outline-primary" onclick="viewReceipt(${b.id})">
+                                <i class="fas fa-receipt"></i> View Receipt
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCompletedCard(b) {
+            return `
+                <div class="booking-card">
+                    <div class="d-flex justify-content-between mb-2">
+                        <div>
+                            <h6>${b.provider_name}</h6>
+                            <small class="text-muted">${b.service_type} - ${b.completed_at || b.cancelled_at || b.timestamp}</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-${b.status === 'cancelled' ? 'danger' : 'success'}">
+                                ${b.status === 'cancelled' ? 'Cancelled' : 'Completed'}
+                            </span>
+                            ${b.payment_status === 'paid' ? '<br><small class="text-success">Paid ₹' + b.payment_amount + '</small>' : ''}
+                        </div>
+                    </div>
+                    ${b.status === 'cancelled' ? `
+                        <div class="alert alert-danger small">
+                            <strong>Cancellation Reason:</strong> ${b.cancellation_reason || 'Not specified'}
+                        </div>
+                    ` : ''}
+                    ${b.rating ? `
+                        <div class="mt-2">
+                            <div class="text-warning">${'★'.repeat(b.rating)}${'☆'.repeat(5-b.rating)}</div>
+                            <p class="text-muted small mb-0"><i>"${b.review}"</i></p>
+                        </div>
+                    ` : ''}
+                    ${b.receipt_id ? `
+                        <button class="btn btn-sm btn-outline-primary mt-2" onclick="viewReceipt(${b.id})">
+                            <i class="fas fa-receipt"></i> View Receipt
+                        </button>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function openChat(requestId) {
+            currentRequestId = requestId;
+            socket.emit('join_room', { room: `chat_${requestId}` });
+            loadMessages();
+            new bootstrap.Modal(document.getElementById('chatModal')).show();
+        }
+
+        function loadMessages() {
+            fetch(`/api/messages/${currentRequestId}`)
+                .then(r => r.json())
+                .then(msgs => {
+                    document.getElementById('chatMessages').innerHTML = msgs.map(m => `
+                        <div class="message ${m.sender}">
+                            <strong>${m.sender === 'consumer' ? 'You' : 'Provider'}:</strong> ${m.message}
+                            <br><small class="text-muted">${m.timestamp}</small>
+                        </div>
+                    `).join('');
+                    document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+                });
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            if (!message) return;
+
+            socket.emit('send_message', {
+                request_id: currentRequestId,
+                sender: 'consumer',
+                message: message
+            });
+
+            input.value = '';
+        }
+
+        function openTracking(requestId) {
+            currentRequestId = requestId;
+            new bootstrap.Modal(document.getElementById('trackingModal')).show();
+            
+            setTimeout(() => {
+                if (!trackingMap) {
+                    trackingMap = L.map('trackingMap').setView([12.9716, 77.5946], 14);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(trackingMap);
+                    
+                    // Add customer marker
+                    L.marker([12.9716, 77.5946]).addTo(trackingMap)
+                        .bindPopup('Your Location').openPopup();
+                    
+                    // Add provider marker (simulated moving)
+                    const providerMarker = L.marker([12.9750, 77.5980], {
+                        icon: L.icon({
+                            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+                            iconSize: [25, 41],
+                            iconAnchor: [12, 41]
+                        })
+                    }).addTo(trackingMap).bindPopup('Provider');
+                    
+                    // Simulate movement
+                    let lat = 12.9750, lng = 77.5980;
+                    setInterval(() => {
+                        lat -= 0.0001;
+                        lng -= 0.0001;
+                        providerMarker.setLatLng([lat, lng]);
+                    }, 2000);
+                }
+                trackingMap.invalidateSize();
+            }, 300);
+        }
+
+        function openReschedule(requestId) {
+            currentRequestId = requestId;
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('rescheduleDate').min = today;
+            new bootstrap.Modal(document.getElementById('rescheduleModal')).show();
+        }
+
+        function confirmReschedule() {
+            const date = document.getElementById('rescheduleDate').value;
+            const time = document.getElementById('rescheduleTime').value;
+            const reason = document.getElementById('rescheduleReason').value;
+
+            if (!date || !time) {
+                alert('Please select date and time');
+                return;
+            }
+
+            fetch('/api/booking/reschedule', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    request_id: currentRequestId,
+                    new_date: date,
+                    new_time: time,
+                    reason: reason
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('rescheduleModal')).hide();
+                    showNotification('Booking rescheduled successfully!', 'success');
+                    loadBookings();
+                }
+            });
+        }
+
+        function openCancel(requestId) {
+            currentRequestId = requestId;
+            new bootstrap.Modal(document.getElementById('cancelModal')).show();
+        }
+
+        function confirmCancel() {
+            const reason = document.getElementById('cancelReason').value;
+            const reasonText = document.getElementById('cancelReasonText').value;
+            const fullReason = reason + (reasonText ? ': ' + reasonText : '');
+
+            if (!reason) {
+                alert('Please select a cancellation reason');
+                return;
+            }
+
+            fetch('/api/booking/cancel', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    request_id: currentRequestId,
+                    reason: fullReason
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('cancelModal')).hide();
+                    showNotification('Booking cancelled', 'info');
+                    loadBookings();
+                }
+            });
+        }
+
+        function openPayment(requestId) {
+            currentRequestId = requestId;
+            new bootstrap.Modal(document.getElementById('paymentModal')).show();
+        }
+
+        function processPayment() {
+            const amount = document.getElementById('paymentAmount').value;
+            
+            fetch('/api/payment/process', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    request_id: currentRequestId,
+                    amount: amount
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
+                    showNotification('Payment successful!', 'success');
+                    loadBookings();
+                }
+            });
+        }
+
+        function viewReceipt(requestId) {
+            fetch(`/api/payment/receipt/${requestId}`)
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('receiptContent').innerHTML = `
+                        <div class="text-center mb-4">
+                            <h4>LocalServe</h4>
+                            <p class="text-muted">Payment Receipt</p>
+                        </div>
+                        <hr>
+                        <div class="row mb-2">
+                            <div class="col-6"><strong>Receipt ID:</strong></div>
+                            <div class="col-6 text-end">${data.receipt_id}</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6"><strong>Date:</strong></div>
+                            <div class="col-6 text-end">${data.date}</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6"><strong>Customer:</strong></div>
+                            <div class="col-6 text-end">${data.customer_name}</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6"><strong>Provider:</strong></div>
+                            <div class="col-6 text-end">${data.provider_name}</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6"><strong>Service:</strong></div>
+                            <div class="col-6 text-end">${data.service}</div>
+                        </div>
+                        <hr>
+                        <div class="row">
+                            <div class="col-6"><h5>Total Amount:</h5></div>
+                            <div class="col-6 text-end"><h5 class="text-success">₹${data.amount}</h5></div>
+                        </div>
+                        <div class="alert alert-success mt-3">
+                            <i class="fas fa-check-circle"></i> Payment Status: ${data.status}
+                        </div>
+                    `;
+                    currentRequestId = requestId;
+                    new bootstrap.Modal(document.getElementById('receiptModal')).show();
+                });
+        }
+
+        function downloadReceipt() {
+            fetch(`/api/payment/receipt/${currentRequestId}/pdf`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        const link = document.createElement('a');
+                        link.href = 'data:application/pdf;base64,' + data.pdf_data;
+                        link.download = data.filename;
+                        link.click();
+                        showNotification('Receipt downloaded!', 'success');
+                    }
+                });
+        }
+
+        function openRating(requestId, providerName) {
+            currentRequestId = requestId;
+            document.getElementById('ratingProviderName').textContent = providerName;
+            selectedRating = 0;
+            updateStarDisplay();
+            new bootstrap.Modal(document.getElementById('ratingModal')).show();
+        }
+
+        document.querySelectorAll('.star-rating').forEach(star => {
+            star.addEventListener('click', function() {
+                selectedRating = parseInt(this.dataset.rating);
+                updateStarDisplay();
+            });
+            star.addEventListener('mouseenter', function() {
+                const rating = parseInt(this.dataset.rating);
+                document.querySelectorAll('.star-rating').forEach((s, idx) => {
+                    s.style.color = idx < rating ? '#ffc107' : '#e0e0e0';
+                });
+            });
+        });
+
+        document.getElementById('starRating').addEventListener('mouseleave', updateStarDisplay);
+
+        function updateStarDisplay() {
+            document.querySelectorAll('.star-rating').forEach((star, idx) => {
+                star.style.color = idx < selectedRating ? '#ffc107' : '#e0e0e0';
+                star.style.cursor = 'pointer';
+            });
+        }
+
+        function submitRating() {
+            const review = document.getElementById('reviewText').value.trim();
+            
+            if (!selectedRating) {
+                alert('Please select a rating');
+                return;
+            }
+
+            fetch('/api/rating/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    request_id: currentRequestId,
+                    rating: selectedRating,
+                    review: review || 'No review provided'
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('ratingModal')).hide();
+                    showNotification('Thank you for your rating!', 'success');
+                    loadBookings();
+                }
+            });
+        }
+
+        function callProvider(phone) {
+            window.location.href = `tel:${phone}`;
+        }
+
+        loadBookings();
+        setInterval(loadBookings, 30000); // Refresh every 30 seconds
+    </script>
+</body>
+</html>

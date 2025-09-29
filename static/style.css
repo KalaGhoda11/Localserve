@@ -1,0 +1,353 @@
+/* Global Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f8f9fa;
+}
+
+/* Landing Page */
+.landing-page {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.landing-page .navbar {
+    background: transparent !important;
+    padding: 1rem 0;
+}
+
+.navbar-brand {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: white !important;
+}
+
+.hero-section {
+    padding: 100px 0;
+    color: white;
+}
+
+.hero-section h1 {
+    font-weight: 800;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+}
+
+.hero-section .lead {
+    font-size: 1.3rem;
+    opacity: 0.9;
+}
+
+.role-selection {
+    margin: 50px 0;
+}
+
+.role-selection .btn {
+    padding: 15px 40px;
+    font-size: 1.1rem;
+    border-radius: 50px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.role-selection .btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+}
+
+.features {
+    margin-top: 80px;
+}
+
+.feature-card {
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(10px);
+    padding: 30px;
+    border-radius: 15px;
+    border: 1px solid rgba(255,255,255,0.2);
+    transition: all 0.3s ease;
+}
+
+.feature-card:hover {
+    background: rgba(255,255,255,0.2);
+    transform: translateY(-5px);
+}
+
+.feature-card i {
+    color: #ffd700;
+}
+
+.footer {
+    background: rgba(0,0,0,0.2);
+    color: white;
+}
+
+/* Search Page */
+.search-panel {
+    background: white;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    height: calc(100vh - 120px);
+    overflow-y: auto;
+}
+
+.map-container {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    height: calc(100vh - 120px);
+}
+
+#map {
+    height: 100%;
+    width: 100%;
+}
+
+/* Provider Cards */
+.provider-card {
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.provider-card:hover {
+    border-color: #667eea;
+    box-shadow: 0 4px 12px rgba(102,126,234,0.2);
+    transform: translateY(-2px);
+}
+
+.provider-card h6 {
+    color: #2d3748;
+    font-weight: 600;
+}
+
+/* Custom Map Markers */
+.user-marker,
+.provider-marker {
+    background: transparent;
+    border: none;
+}
+
+/* Modals */
+.modal-content {
+    border-radius: 20px;
+    border: none;
+}
+
+.modal-header {
+    border-bottom: 1px solid #e9ecef;
+    background: #f8f9fa;
+    border-radius: 20px 20px 0 0;
+}
+
+.success-icon i {
+    animation: scaleIn 0.5s ease;
+}
+
+@keyframes scaleIn {
+    0% {
+        transform: scale(0);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Buttons */
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102,126,234,0.4);
+}
+
+.btn-outline-primary {
+    border-color: #667eea;
+    color: #667eea;
+}
+
+.btn-outline-primary:hover {
+    background: #667eea;
+    border-color: #667eea;
+    color: white;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .hero-section {
+        padding: 60px 0;
+    }
+    
+    .hero-section h1 {
+        font-size: 2rem;
+    }
+    
+    .role-selection .btn {
+        display: block;
+        width: 100%;
+        margin: 10px 0;
+    }
+    
+    .search-panel {
+        height: auto;
+        margin-bottom: 20px;
+    }
+    
+    .map-container {
+        height: 400px;
+    }
+}
+
+/* Loading Animation */
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* Badge Styles */
+.badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+}
+
+/* Scrollbar Styling */
+.search-panel::-webkit-scrollbar {
+    width: 8px;
+}
+
+.search-panel::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.search-panel::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 10px;
+}
+
+.search-panel::-webkit-scrollbar-thumb:hover {
+    background: #764ba2;
+}
+
+/* Provider Dashboard Styles */
+.provider-profile-card {
+    border-radius: 15px;
+    border: none;
+}
+
+.provider-avatar {
+    margin: 0 auto;
+}
+
+.stats-card {
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.stats-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15) !important;
+}
+
+.stats-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+}
+
+.stats-icon.bg-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.stats-icon.bg-warning {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.stats-icon.bg-success {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.request-card {
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    padding: 15px;
+    transition: all 0.3s ease;
+}
+
+.request-card:hover {
+    border-color: #667eea;
+    box-shadow: 0 4px 12px rgba(102,126,234,0.2);
+}
+
+.service-item {
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.service-item:last-child {
+    border-bottom: none;
+}
+
+.availability-toggle .form-check-input {
+    width: 3rem;
+    height: 1.5rem;
+    cursor: pointer;
+}
+
+.availability-toggle .form-check-input:checked {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+.completed-job-item {
+    transition: all 0.2s ease;
+}
+
+.completed-job-item:hover {
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 8px;
+    margin: -10px;
+}
+
+/* Toast Notification */
+.toast {
+    min-width: 300px;
+}
+
+/* Card Headers */
+.card-header {
+    border-bottom: 2px solid #f0f0f0;
+    padding: 15px 20px;
+}
+
+/* Responsive for Provider Dashboard */
+@media (max-width: 992px) {
+    .stats-card {
+        margin-bottom: 15px;
+    }
+}

@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Provider Settings - LocalServe</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: #f8f9fa; }
+        body.dark-mode { background: #1a1d2e; color: #e0e0e0; }
+        body.dark-mode .card { background: #252945; color: #e0e0e0; }
+        body.dark-mode .form-control, body.dark-mode .form-select { 
+            background: #2d3250; 
+            color: #e0e0e0; 
+            border-color: #3d4568; 
+        }
+        body.dark-mode .navbar { background: #252945 !important; }
+        
+        .settings-section { 
+            background: white; 
+            border-radius: 12px; 
+            padding: 25px; 
+            margin-bottom: 20px; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); 
+        }
+        
+        .profile-avatar-upload {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            margin: 0 auto 20px;
+        }
+        
+        .profile-avatar-upload img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid #667eea;
+        }
+        
+        .profile-avatar-upload .upload-overlay {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            background: #667eea;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: white;
+        }
+        
+        .service-chip {
+            display: inline-block;
+            padding: 8px 15px;
+            background: #e9ecef;
+            border-radius: 20px;
+            margin: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .service-chip:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .service-chip.selected {
+            background: #667eea;
+            color: white;
+        }
+        
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .gallery-item {
+            position: relative;
+            aspect-ratio: 4/3;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .gallery-item .remove-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(220, 53, 69, 0.9);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: none;
+        }
+        
+        .gallery-item:hover .remove-btn {
+            display: block;
+        }
+        
+        .save-btn-fixed {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 1000;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-primary sticky-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/provider/dashboard">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+            <span class="navbar-text text-white">
+                <i class="fas fa-cog"></i> Settings
+            </span>
+        </div>
+    </nav>
+
+    <div class="container py-4">
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <!-- Profile Picture Section -->
+                <div class="settings-section">
+                    <h5 class="mb-4"><i class="fas fa-user-circle text-primary"></i> Profile Picture</h5>
+                    <div class="text-center">
+                        <div class="profile-avatar-upload">
+                            <img id="profileImage" src="https://via.placeholder.com/150" alt="Profile">
+                            <div class="upload-overlay" onclick="document.getElementById('imageUpload').click()">
+                                <i class="fas fa-camera"></i>
+                            </div>
+                            <input type="file" id="imageUpload" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
+                        </div>
+                        <p class="text-muted small">Click the camera icon to upload a new profile picture</p>
+                    </div>
+                </div>
+
+                <!-- Basic Information -->
+                <div class="settings-section">
+                    <h5 class="mb-4"><i class="fas fa-info-circle text-primary"></i> Basic Information</h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Business Name *</label>
+                            <input type="text" class="form-control" id="businessName" placeholder="John's Electricals">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Service Type *</label>
+                            <select class="form-select" id="serviceType">
+                                <option value="Electrician">Electrician</option>
+                                <option value="Plumber">Plumber</option>
+                                <option value="Carpenter">Carpenter</option>
+                                <option value="Painter">Painter</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Phone Number *</label>
+                            <input type="tel" class="form-control" id="phone" placeholder="+91 98765 43210">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Email Address *</label>
+                            <input type="email" class="form-control" id="email" placeholder="john@electricals.com">
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Address</label>
+                            <input type="text" class="form-control" id="address" placeholder="Indiranagar, Bangalore">
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Bio / About</label>
+                            <textarea class="form-control" id="bio" rows="3" placeholder="Tell customers about your expertise..."></textarea>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Years of Experience</label>
+                            <input type="number" class="form-control" id="experience" placeholder="10" min="0">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Price Range</label>
+                            <input type="text" class="form-control" id="priceRange" placeholder="₹500-800">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Services Offered -->
+                <div class="settings-section">
+                    <h5 class="mb-4"><i class="fas fa-wrench text-primary"></i> Services Offered</h5>
+                    <p class="text-muted small mb-3">Select the services you provide:</p>
+                    <div id="servicesContainer">
+                        <div class="service-chip" data-service="Installation">
+                            <i class="fas fa-plus-circle"></i> Installation
+                        </div>
+                        <div class="service-chip" data-service="Repair">
+                            <i class="fas fa-tools"></i> Repair
+                        </div>
+                        <div class="service-chip" data-service="Products">
+                            <i class="fas fa-box"></i> Products
+                        </div>
+                        <div class="service-chip" data-service="Wiring">
+                            <i class="fas fa-bolt"></i> Wiring
+                        </div>
+                        <div class="service-chip" data-service="Appliance Repair">
+                            <i class="fas fa-blender"></i> Appliance Repair
+                        </div>
+                        <div class="service-chip" data-service="Emergency Service">
+                            <i class="fas fa-exclamation-triangle"></i> Emergency Service
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Working Hours -->
+                <div class="settings-section">
+                    <h5 class="mb-4"><i class="fas fa-clock text-primary"></i> Working Hours</h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Start Time</label>
+                            <input type="time" class="form-control" id="startTime" value="09:00">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">End Time</label>
+                            <input type="time" class="form-control" id="endTime" value="18:00">
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="availability24x7">
+                                <label class="form-check-label" for="availability24x7">
+                                    Available 24x7 (Emergency Services)
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Languages -->
+                <div class="settings-section">
+                    <h5 class="mb-4"><i class="fas fa-language text-primary"></i> Languages</h5>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input class="form-check-input language-check" type="checkbox" value="English" id="langEnglish">
+                                <label class="form-check-label" for="langEnglish">English</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input class="form-check-input language-check" type="checkbox" value="Hindi" id="langHindi">
+                                <label class="form-check-label" for="langHindi">Hindi</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input class="form-check-input language-check" type="checkbox" value="Kannada" id="langKannada">
+                                <label class="form-check-label" for="langKannada">Kannada</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input class="form-check-input language-check" type="checkbox" value="Tamil" id="langTamil">
+                                <label class="form-check-label" for="langTamil">Tamil</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input class="form-check-input language-check" type="checkbox" value="Telugu" id="langTelugu">
+                                <label class="form-check-label" for="langTelugu">Telugu</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gallery -->
+                <div class="settings-section">
+                    <h5 class="mb-4"><i class="fas fa-images text-primary"></i> Work Gallery</h5>
+                    <p class="text-muted small mb-3">Upload photos of your previous work (Max 10 images)</p>
+                    <button class="btn btn-outline-primary mb-3" onclick="document.getElementById('galleryUpload').click()">
+                        <i class="fas fa-upload"></i> Upload Images
+                    </button>
+                    <input type="file" id="galleryUpload" accept="image/*" multiple style="display: none;" onchange="handleGalleryUpload(event)">
+                    <div class="gallery-grid" id="galleryGrid"></div>
+                </div>
+
+                <!-- Certifications -->
+                <div class="settings-section">
+                    <h5 class="mb-4"><i class="fas fa-certificate text-primary"></i> Certifications</h5>
+                    <div id="certificationsContainer">
+                        <div class="input-group mb-2">
+                            <input type="text" class="form-control" placeholder="Enter certification name">
+                            <button class="btn btn-outline-danger" onclick="this.parentElement.remove()">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary" onclick="addCertification()">
+                        <i class="fas fa-plus"></i> Add Certification
+                    </button>
+                </div>
+
+                <!-- Account Settings -->
+                <div class="settings-section">
+                    <h5 class="mb-4"><i class="fas fa-shield-alt text-primary"></i> Account Settings</h5>
+                    <button class="btn btn-warning mb-2 w-100">
+                        <i class="fas fa-key"></i> Change Password
+                    </button>
+                    <button class="btn btn-danger w-100">
+                        <i class="fas fa-user-times"></i> Deactivate Account
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Save Button -->
+    <button class="btn btn-primary btn-lg save-btn-fixed" onclick="saveSettings()">
+        <i class="fas fa-save"></i> Save Changes
+    </button>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const providerId = 1;
+        let selectedServices = [];
+        let galleryImages = [];
+
+        // Load existing profile data
+        function loadProfile() {
+            fetch(`/api/provider/profile?provider_id=${providerId}`)
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('businessName').value = data.name || '';
+                    document.getElementById('serviceType').value = data.service || '';
+                    document.getElementById('phone').value = data.phone || '';
+                    document.getElementById('email').value = data.email || '';
+                    document.getElementById('address').value = data.address || '';
+                    document.getElementById('bio').value = data.bio || '';
+                    document.getElementById('experience').value = data.years_experience || '';
+                    document.getElementById('priceRange').value = data.price || '';
+                    document.getElementById('startTime').value = data.working_hours?.start || '09:00';
+                    document.getElementById('endTime').value = data.working_hours?.end || '18:00';
+                    
+                    if (data.profile_image) {
+                        document.getElementById('profileImage').src = data.profile_image;
+                    }
+                    
+                    // Load services
+                    selectedServices = data.services || [];
+                    updateServiceChips();
+                    
+                    // Load languages
+                    if (data.languages) {
+                        data.languages.forEach(lang => {
+                            const checkbox = document.getElementById(`lang${lang}`);
+                            if (checkbox) checkbox.checked = true;
+                        });
+                    }
+                    
+                    // Load gallery
+                    galleryImages = data.gallery || [];
+                    renderGallery();
+                });
+        }
+
+        // Service chip selection
+        document.querySelectorAll('.service-chip').forEach(chip => {
+            chip.addEventListener('click', function() {
+                const service = this.dataset.service;
+                if (selectedServices.includes(service)) {
+                    selectedServices = selectedServices.filter(s => s !== service);
+                } else {
+                    selectedServices.push(service);
+                }
+                updateServiceChips();
+            });
+        });
+
+        function updateServiceChips() {
+            document.querySelectorAll('.service-chip').forEach(chip => {
+                const service = chip.dataset.service;
+                if (selectedServices.includes(service)) {
+                    chip.classList.add('selected');
+                } else {
+                    chip.classList.remove('selected');
+                }
+            });
+        }
+
+        // Image upload handlers
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('profileImage').src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function handleGalleryUpload(event) {
+            const files = Array.from(event.target.files);
+            files.forEach(file => {
+                if (galleryImages.length < 10) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        galleryImages.push(e.target.result);
+                        renderGallery();
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    alert('Maximum 10 images allowed');
+                }
+            });
+        }
+
+        function renderGallery() {
+            const grid = document.getElementById('galleryGrid');
+            grid.innerHTML = galleryImages.map((img, index) => `
+                <div class="gallery-item">
+                    <img src="${img}" alt="Work ${index + 1}">
+                    <button class="remove-btn" onclick="removeGalleryImage(${index})">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function removeGalleryImage(index) {
+            galleryImages.splice(index, 1);
+            renderGallery();
+        }
+
+        function addCertification() {
+            const container = document.getElementById('certificationsContainer');
+            const div = document.createElement('div');
+            div.className = 'input-group mb-2';
+            div.innerHTML = `
+                <input type="text" class="form-control" placeholder="Enter certification name">
+                <button class="btn btn-outline-danger" onclick="this.parentElement.remove()">
+                    <i class="fas fa-trash"></i>
+                </button>
+            `;
+            container.appendChild(div);
+        }
+
+        function saveSettings() {
+            // Gather all form data
+            const languages = Array.from(document.querySelectorAll('.language-check:checked')).map(cb => cb.value);
+            const certifications = Array.from(document.querySelectorAll('#certificationsContainer input')).map(input => input.value).filter(v => v);
+            
+            const profileData = {
+                name: document.getElementById('businessName').value,
+                service: document.getElementById('serviceType').value,
+                phone: document.getElementById('phone').value,
+                email: document.getElementById('email').value,
+                address: document.getElementById('address').value,
+                bio: document.getElementById('bio').value,
+                years_experience: parseInt(document.getElementById('experience').value) || 0,
+                price: document.getElementById('priceRange').value,
+                services: selectedServices,
+                working_hours: {
+                    start: document.getElementById('startTime').value,
+                    end: document.getElementById('endTime').value
+                },
+                languages: languages,
+                certifications: certifications,
+                profile_image: document.getElementById('profileImage').src,
+                gallery: galleryImages
+            };
+
+            // Save to backend
+            fetch(`/api/provider/profile?provider_id=${providerId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(profileData)
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    // Show success message
+                    const alert = document.createElement('div');
+                    alert.className = 'alert alert-success position-fixed top-0 start-50 translate-middle-x mt-3';
+                    alert.style.zIndex = '9999';
+                    alert.innerHTML = '<i class="fas fa-check-circle"></i> Profile updated successfully!';
+                    document.body.appendChild(alert);
+                    
+                    setTimeout(() => alert.remove(), 3000);
+                } else {
+                    alert('Error updating profile');
+                }
+            })
+            .catch(err => {
+                console.error('Save error:', err);
+                alert('Error updating profile');
+            });
+        }
+
+        // Load profile on page load
+        loadProfile();
+    </script>
+</body>
+</html>

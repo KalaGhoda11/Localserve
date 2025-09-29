@@ -123,6 +123,141 @@ async def get_status_checks():
     status_checks = await db.status_checks.find().to_list(1000)
     return [StatusCheck(**status_check) for status_check in status_checks]
 
+# Profile API Routes
+@api_router.post("/profiles", response_model=UserProfile)
+async def create_profile(profile: UserProfileCreate):
+    """Create a new user profile"""
+    try:
+        # Check if email already exists
+        existing_profile = await db.profiles.find_one({"email": profile.email})
+        if existing_profile:
+            raise HTTPException(status_code=400, detail="Profile with this email already exists")
+        
+        # Create new profile
+        profile_dict = profile.dict()
+        profile_obj = UserProfile(**profile_dict)
+        
+        # Insert into database
+        await db.profiles.insert_one(profile_obj.dict())
+        
+        return profile_obj
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=500, detail=f"Failed to create profile: {str(e)}")
+
+@api_router.get("/profiles", response_model=List[UserProfile])
+async def get_all_profiles():
+    """Get all user profiles"""
+    try:
+        profiles = await db.profiles.find().to_list(1000)
+        return [UserProfile(**profile) for profile in profiles]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch profiles: {str(e)}")
+
+@api_router.get("/profiles/{profile_id}", response_model=UserProfile)
+async def get_profile(profile_id: str):
+    """Get a specific user profile by ID"""
+    try:
+        profile = await db.profiles.find_one({"id": profile_id})
+        if not profile:
+            raise HTTPException(status_code=404, detail="Profile not found")
+        
+        return UserProfile(**profile)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch profile: {str(e)}")
+
+@api_router.put("/profiles/{profile_id}", response_model=UserProfile)
+async def update_profile(profile_id: str, profile_update: UserProfileUpdate):
+    """Update a specific user profile"""
+    try:
+        # Check if profile exists
+        existing_profile = await db.profiles.find_one({"id": profile_id})
+        if not existing_profile:
+            raise HTTPException(status_code=404, detail="Profile not found")
+        
+        # Update profile
+        update_data = profile_update.dict(exclude_unset=True)
+        if update_data:
+            update_data["updated_at"] = datetime.utcnow()
+            
+            # Check email uniqueness if email is being updated
+            if "email" in update_data:
+                email_exists = await db.profiles.find_one({
+                    "email": update_data["email"], 
+                    "id": {"$ne": profile_id}
+                })
+                if email_exists:
+                    raise HTTPException(status_code=400, detail="Email already exists")
+            
+            await db.profiles.update_one(
+                {"id": profile_id},
+                {"$set": update_data}
+            )
+        
+        # Return updated profile
+        updated_profile = await db.profiles.find_one({"id": profile_id})
+        return UserProfile(**updated_profile)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update profile: {str(e)}")
+
+@api_router.delete("/profiles/{profile_id}")
+async def delete_profile(profile_id: str):
+    """Delete a specific user profile"""
+    try:
+        # Check if profile exists
+        existing_profile = await db.profiles.find_one({"id": profile_id})
+        if not existing_profile:
+            raise HTTPException(status_code=404, detail="Profile not found")
+        
+        # Delete profile
+        await db.profiles.delete_one({"id": profile_id})
+        
+        return {"message": "Profile deleted successfully", "profile_id": profile_id}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete profile: {str(e)}")
+
+@api_router.post("/profiles/{profile_id}/upload-image")
+async def upload_profile_image(profile_id: str, file: UploadFile = File(...)):
+    """Upload profile image and convert to base64"""
+    try:
+        # Validate file type
+        if not file.content_type.startswith('image/'):
+            raise HTTPException(status_code=400, detail="File must be an image")
+        
+        # Check file size (limit to 5MB)
+        contents = await file.read()
+        if len(contents) > 5 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="File size must be less than 5MB")
+        
+        # Convert to base64
+        base64_image = base64.b64encode(contents).decode('utf-8')
+        image_data = f"data:{file.content_type};base64,{base64_image}"
+        
+        # Update profile
+        result = await db.profiles.update_one(
+            {"id": profile_id},
+            {"$set": {"profile_image": image_data, "updated_at": datetime.utcnow()}}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Profile not found")
+        
+        return {"message": "Profile image uploaded successfully", "image_url": image_data}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to upload image: {str(e)}")
+
 # Include the router in the main app
 app.include_router(api_router)
 
